@@ -1,5 +1,7 @@
+import Test from '@/pages/Test';
+
 const App = () => {
-  return <></>;
+  return <Test />;
 };
 
 export default App;
