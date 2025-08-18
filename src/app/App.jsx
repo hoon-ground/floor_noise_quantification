@@ -1,4 +1,4 @@
-import Test from '@/pages/Test';
+import Test from '@pages/test/Test';
 
 const App = () => {
   return <Test />;

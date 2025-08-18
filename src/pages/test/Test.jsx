@@ -6,7 +6,7 @@ import {
   getNoiseDataByCustomer,
   updateNoiseData,
   deleteNoiseDataWithFile,
-} from '@/api/noiseData';
+} from '@entities/noise/api/noiseApi';
 
 const initialForm = {
   customerId: 1,
