@@ -1,9 +1,9 @@
 import styled from 'styled-components';
 import NoiseChart from '@widgets/noise-chart/ui/NoiseChart';
-import StressIndex from '@widgets/stress-index/ui/StressIndex';
+import NoiseIndex from '@widgets/noise-index/ui/NoiseIndex';
 import PeakTimes from '@widgets/peak-times/ui/PeakTimes';
 import AIFeedback from '@widgets/ai-feedback/ui/AIFeedback';
-import MicWidget from '@widgets/mic-widget/ui/MicWidget';
+import UploadFile from '@widgets/file-upload/ui/UploadFile';
 
 const Title = styled.h1`
   color: #4c4c4c;
@@ -27,10 +27,10 @@ const MainPage = () => (
     <Title>층간소음</Title>
     <NoiseChart />
     <Grid>
-      <StressIndex />
+      <NoiseIndex />
       <PeakTimes />
       <AIFeedback />
-      <MicWidget />
+      <UploadFile />
     </Grid>
   </div>
 );
