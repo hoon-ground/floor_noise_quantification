@@ -1,9 +1,9 @@
 import styled from 'styled-components';
-import NoiseChart from '@widgets/noise-chart/ui/NoiseChart';
-import NoiseIndex from '@widgets/noise-index/ui/NoiseIndex';
+import WeeklyActivity from '@widgets/weekly-activity/ui/WeeklyActivity';
 import PeakTimes from '@widgets/peak-times/ui/PeakTimes';
 import AIFeedback from '@widgets/ai-feedback/ui/AIFeedback';
 import UploadFile from '@widgets/file-upload/ui/UploadFile';
+import MicWidget from '@widgets/mic-widget/ui/MicWidget';
 
 const Title = styled.h1`
   color: #4c4c4c;
@@ -18,20 +18,32 @@ const Title = styled.h1`
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
+`;
+
+const MicWrap = styled.div`
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
 `;
 
 const MainPage = () => (
   <div>
     <Title>층간소음</Title>
-    <NoiseChart />
+    <WeeklyActivity />
+
     <Grid>
-      <NoiseIndex />
       <PeakTimes />
       <AIFeedback />
       <UploadFile />
     </Grid>
+
+    <MicWrap>
+      <MicWidget />
+    </MicWrap>
   </div>
 );
 

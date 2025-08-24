@@ -7,6 +7,7 @@ import { uploadNoiseData } from '@entities/noise/api/noiseApi';
 const UploadContainer = styled.div`
   display: grid;
   gap: 10px;
+  margin: 0 auto;
 `;
 
 const FileWrapper = styled.div`
@@ -139,7 +140,7 @@ const UploadFile = () => {
     <Card>
       <UploadContainer>
         <FileWrapper>
-          <FileChoice htmlFor="noise-audio">+ 오디오 선택</FileChoice>
+          <FileChoice htmlFor="noise-audio">+ 분석할 녹음 선택</FileChoice>
           <HiddenInput id="noise-audio" type="file" accept="audio/*" onChange={handleFileChange} />
           <FileName>{fileName || '선택된 파일 없음'}</FileName>
         </FileWrapper>

@@ -4,7 +4,7 @@ const Spinner = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 325px;
+  height: 200px;
   background-color: #ffffff;
 
   &::after {

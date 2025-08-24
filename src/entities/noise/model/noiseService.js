@@ -22,7 +22,7 @@ export const getRecentNoiseChartData = async () => {
   return trimmed.map((item) => item.decibelLevel);
 };
 
-export const getNoiseIndex = async () => {
+/*export const getNoiseIndex = async () => {
   const res = await getCustomerNoiseData();
   if (!res.data.success) {
     throw new Error('소음 데이터 조회 실패');
@@ -33,9 +33,18 @@ export const getNoiseIndex = async () => {
     return 0;
   }
 
+  const sorted = [...list].sort((a, b) => new Date(a.uploadTime) - new Date(b.uploadTime));
+  const latest = sorted[sorted.length - 1];
+
   const decibelAvg = list.reduce((acc, v) => acc + v.decibelLevel, 0) / list.length;
-  return Math.round(decibelAvg);
+  return {
+    decibelAvg,
+    noiseType: latest.noiseType,
+    memo: latest.memo,
+    uploadTime: latest.uploadTime,
+  };
 };
+*/
 
 export const sendNoiseData = async ({ customerId, decibelLevel, file }) => {
   try {

@@ -2,14 +2,14 @@ import styled from 'styled-components';
 import Card from '@shared/ui/Card';
 
 const Title = styled.h3`
-  margin: 0 0 8px;
+  margin: 0 auto;
   font-size: 14px;
   font-weight: 700;
   color: #4c4c4c;
 `;
 
 const TimeList = styled.ul`
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   list-style: none;
   display: grid;
@@ -27,7 +27,7 @@ const TimeItem = styled.li`
 `;
 
 const PeakTimes = () => {
-  const times = ['18:00 ~ 19:00', '18:00 ~ 19:00', '18:00 ~ 19:00'];
+  const times = ['00:00 ~ 02:00', '03:00 ~ 04:00', '22:00 ~ 23:00'];
 
   return (
     <Card>
