@@ -1,132 +1,225 @@
 import styled from 'styled-components';
 import Card from '@shared/ui/Card';
+import Spinner from '@shared/ui/Spinner';
+import { useEffect, useMemo, useState } from 'react';
+import { getNoiseDataByDate } from '@entities/noise/api/noiseApi';
+import { bucketize, pickBucketMs, yTicks10 } from '@entities/noise/model/timeBuckets';
 
-const Title = styled.h2`
+const Title = styled.div`
   color: #4c4c4c;
-  font-family: Inter;
-  font-size: 0.875rem;
-  font-style: normal;
-  font-weight: 600;
-  line-height: 140%;
+  font-weight: 700;
+  margin-bottom: 8px;
 `;
-
-const ChartWrap = styled.div`
-  height: 200px;
-  border-radius: 12px;
-  background: #fff;
+const ChartContainer = styled.div`
+  height: 220px;
   padding: 8px;
+  background: #fff;
+  border-radius: 12px;
   display: flex;
   align-items: center;
 `;
 
-const createScale = (domainMin, domainMax, rangeMin, rangeMax) => {
-  const d = domainMax - domainMin || 1;
-  const r = rangeMax - rangeMin;
-  return (v) => rangeMin + ((v - domainMin) / d) * r;
+const sameDate = (a, b) => {
+  if (!a || !b) {
+    return false;
+  }
+  return String(a).slice(0, 10) === String(b).slice(0, 10);
 };
 
-// TODO : 전부 임시 데이터. 갈아엎을 예정
-const NoiseChart = () => {
-  const data = [3, 5, 4, 6, 7, 8, 7, 9, 6, 8, 10, 6, 7, 8, 11, 9, 8, 7];
+const fallbackRange = () => {
+  const ds = new Date().toISOString().slice(0, 10);
+  return {
+    startIso: ds,
+    endIso: ds,
+    start: new Date(`${ds}T00:01:00`),
+    end: new Date(`${ds}T23:59:00`),
+    singleDay: true,
+  };
+};
 
-  const W = 680;
-  const H = 160;
-  const P = 24;
-  const innerW = W - P * 2;
-  const innerH = H - P * 2;
+const NoiseChart = ({ startDate, endDate }) => {
+  const [loading, setLoading] = useState(false);
+  const [series, setSeries] = useState([]);
+  const [bucketMs, setBucketMs] = useState(60 * 1000);
+  const [error, setError] = useState('');
 
-  const yMax = Math.max(...data, 1);
-  const xScale = createScale(0, data.length - 1, P, P + innerW);
-  const yScale = createScale(0, yMax, P + innerH, P);
+  const { start, end, singleDay, startIso, endIso } = useMemo(() => {
+    if (!startDate || !endDate) {
+      return fallbackRange();
+    }
 
-  const points = data.map((v, i) => `${xScale(i)},${yScale(v)}`).join(' ');
+    if (sameDate(startDate, endDate)) {
+      return {
+        startIso: startDate,
+        endIso: endDate,
+        start: new Date(`${startDate}T00:01:00`),
+        end: new Date(`${endDate}T23:59:00`),
+        singleDay: true,
+      };
+    }
+    return {
+      startIso: startDate,
+      endIso: endDate,
+      start: new Date(`${startDate}T00:00:00`),
+      end: new Date(`${endDate}T23:59:59`),
+      singleDay: false,
+    };
+  }, [startDate, endDate]);
 
-  const areaPath = `
-    M ${xScale(0)} ${yScale(0)}
-    L ${points}
-    L ${xScale(data.length - 1)} ${yScale(0)}
-    Z
-  `;
+  useEffect(() => {
+    if (!start || !end) {
+      return;
+    }
 
-  const yTicks = [0, 60, 80, 100, 120, 140].filter((t) => t <= Math.max(140, yMax));
-  const xLabels = [
-    { idx: 0, label: '00:00' },
-    { idx: 2, label: '02:00' },
-    { idx: 4, label: '04:00' },
-    { idx: 6, label: '06:00' },
-  ].filter(({ idx }) => idx < data.length);
+    const fetchRange = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const res = await getNoiseDataByDate({ startDate: startIso, endDate: endIso });
+        if (!res.data?.success) {
+          throw new Error('소음 데이터 조회 실패');
+        }
+        const list = res.data.data || [];
+
+        const dur = end - start;
+        const bm = pickBucketMs(dur, { singleDay });
+        setBucketMs(bm);
+
+        const buckets = bucketize({ points: list, start, end, bucketMs: bm });
+        setSeries(buckets);
+      } catch (e) {
+        console.error(e);
+        setError('데이터 없음');
+        setSeries([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRange();
+  }, [start, end, singleDay, startIso, endIso]);
+
+  const W = 680,
+    H = 200,
+    P = 28;
+  const innerW = W - P * 2,
+    innerH = H - P * 2;
+
+  const yMax = Math.max(...series.map((s) => s.v), 1);
+  const yTicks = yTicks10(yMax);
+  const yMaxTick = (yTicks[yTicks.length - 1] ?? 10) || 10;
+
+  const xScale = (i) => P + (innerW * i) / Math.max(1, (series.length || 1) - 1);
+  const yScale = (v) => P + innerH - (innerH * v) / yMaxTick;
+
+  const points =
+    series.length > 0 ? series.map((s, i) => `${xScale(i)},${yScale(s.v)}`).join(' ') : '';
+
+  const areaPath =
+    series.length > 0
+      ? `M ${xScale(0)} ${yScale(0)} L ${points} L ${xScale(series.length - 1)} ${yScale(0)} Z`
+      : '';
+
+  const fmtX = (t) => {
+    const d = new Date(t);
+    return singleDay ? d.toTimeString().slice(0, 5) : `${d.getMonth() + 1}/${d.getDate()}`;
+  };
+
+  const xLabelIdx = useMemo(() => {
+    const n = series.length;
+
+    if (n <= 1) {
+      return [0];
+    }
+
+    const want = Math.min(8, Math.max(3, Math.floor(n / 6)));
+    const step = Math.max(1, Math.floor(n / want));
+    const arr = [];
+
+    for (let i = 0; i < n; i += step) {
+      arr.push(i);
+    }
+    if (arr[arr.length - 1] !== n - 1) {
+      arr.push(n - 1);
+    }
+    return arr;
+  }, [series.length]);
 
   return (
     <Card>
       <Title>시간대별 소음 수치</Title>
-      <ChartWrap>
-        <svg
-          width="100%"
-          height="100%"
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="시간대별 소음 차트"
-        >
-          <defs>
-            <linearGradient id="noiseArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#5ca4ff" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#5ca4ff" stopOpacity="0.05" />
-            </linearGradient>
-          </defs>
+      <ChartContainer>
+        {loading ? (
+          <Spinner />
+        ) : (
+          <svg
+            width="100%"
+            height="100%"
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label="시간대별 소음 차트"
+          >
+            <defs>
+              <linearGradient id="rangeArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#5ca4ff" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#5ca4ff" stopOpacity="0.05" />
+              </linearGradient>
+            </defs>
 
-          <rect x="0" y="0" width={W} height={H} rx="12" fill="#fff" />
+            <rect x="0" y="0" width={W} height={H} rx="12" fill="#fff" />
 
-          <g fontSize="12" fill="#77838f" textAnchor="middle">
-            {yTicks.map((t) => (
-              <text
-                key={`ylab-${t}`}
-                x={P - 10}
-                y={yScale(t) + 4}
-                style={{ pointerEvents: 'none' }}
-              >
-                {t}
+            {/* y grid + labels */}
+            <g stroke="#e9edf5">
+              {yTicks.map((t) => (
+                <line key={t} x1={P} x2={P + innerW} y1={yScale(t)} y2={yScale(t)} />
+              ))}
+            </g>
+            <g fontSize="12" fill="#77838f" textAnchor="end">
+              {yTicks.map((t) => (
+                <text key={t} x={P - 8} y={yScale(t) + 4}>
+                  {t}
+                </text>
+              ))}
+            </g>
+
+            {/* area + line */}
+            {series.length ? (
+              <>
+                <path d={areaPath} fill="url(#rangeArea)" />
+                <polyline
+                  points={points}
+                  fill="none"
+                  stroke="#5ca4ff"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </>
+            ) : (
+              <text x={W / 2} y={H / 2} textAnchor="middle" fill="#9aa5b1">
+                {error || '데이터 없음'}
               </text>
-            ))}
-          </g>
+            )}
 
-          <g stroke="#e9edf5" strokeWidth="1">
-            {yTicks.map((t) => (
-              <line key={`ygrid-${t}`} x1={P} x2={P + innerW} y1={yScale(t)} y2={yScale(t)} />
-            ))}
-          </g>
+            {/* x labels */}
+            <g fontSize="12" fill="#908f8f" textAnchor="middle">
+              {xLabelIdx.map((i) => (
+                <text key={i} x={xScale(i)} y={P + innerH + 16}>
+                  {series[i] ? fmtX(series[i].t) : ''}
+                </text>
+              ))}
+            </g>
 
-          <g stroke="#e9edf5" strokeWidth="1">
-            {[0, 1, 2, 3].map((k) => {
-              const x = P + (innerW / 3) * k;
-              return <line key={`xgrid-${k}`} x1={x} x2={x} y1={P} y2={P + innerH} />;
-            })}
-          </g>
-
-          <path d={areaPath} fill="url(#noiseArea)" />
-          <polyline
-            points={points}
-            fill="none"
-            stroke="#5ca4ff"
-            strokeWidth="3"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-
-          <g fontSize="12" fill="#908f8f" textAnchor="middle">
-            {xLabels.map(({ idx, label }) => (
-              <text
-                key={`xlab-${idx}`}
-                x={xScale(idx)}
-                y={P + innerH + 18}
-                style={{ pointerEvents: 'none' }}
-              >
-                {label}
+            {/* 버킷 안내 */}
+            <g fontSize="11" fill="#9aa5b1">
+              <text x={W - P} y={H - 8} textAnchor="end">
+                bucket: {Math.round(bucketMs / 60000)}m
               </text>
-            ))}
-          </g>
-        </svg>
-      </ChartWrap>
+            </g>
+          </svg>
+        )}
+      </ChartContainer>
     </Card>
   );
 };
