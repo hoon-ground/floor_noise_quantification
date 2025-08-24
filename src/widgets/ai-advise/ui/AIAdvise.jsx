@@ -1,8 +1,7 @@
 import styled from 'styled-components';
 import Card from '@shared/ui/Card';
 import Spinner from '@shared/ui/Spinner';
-import { useEffect, useState } from 'react';
-import { getNoiseReport } from '@entities/noise/api/noiseApi';
+import { useNoiseReport } from '@entities/noise/model/noiseQueries';
 
 const Title = styled.h2`
   color: #4c4c4c;
@@ -88,31 +87,18 @@ const ErrorText = styled.div`
   padding: 24px 0;
 `;
 
-const AIAdvise = ({ startDate, endDate }) => {
-  const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState(null);
-  const [error, setError] = useState('');
+const AIAdvise = ({ startDate, endDate, report: _reportFromParent }) => {
+  const {
+    data: report,
+    isLoading,
+    isError,
+  } = useNoiseReport(startDate, endDate, {
+    enabled: !_reportFromParent,
+  });
 
-  useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        setReport(null);
-
-        const res = await getNoiseReport({ startDate, endDate });
-        if (!res.data?.success) throw new Error('리포트 조회 실패');
-
-        setReport(res.data.data);
-      } catch (e) {
-        console.error(e);
-        setError('데이터 없음');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReport();
-  }, [startDate, endDate]);
+  const r = _reportFromParent || report;
+  const loading = !_reportFromParent && isLoading;
+  const error = !_reportFromParent && isError;
 
   const fmtDateTime = (s) => (s ? s.replace('T', ' ').slice(0, 16) : '');
 
@@ -121,71 +107,67 @@ const AIAdvise = ({ startDate, endDate }) => {
       <Title>AI 분석 리포트</Title>
       <Wrap>
         {loading && <Spinner />}
-
-        {!loading && error && <ErrorText>{error}</ErrorText>}
-
-        {!loading && !error && report && (
+        {!loading && error && <ErrorText>데이터 없음</ErrorText>}
+        {!loading && !error && r && (
           <>
             <Row>
               <Key>기간</Key>
               <Val>
-                {report.startDate?.slice(0, 10)} ~ {report.endDate?.slice(0, 10)}
+                {r.startDate?.slice(0, 10)} ~ {r.endDate?.slice(0, 10)}
               </Val>
             </Row>
             <Row>
               <Key>평균 소음(dB)</Key>
-              <Val>{report.averageNoiseDecibel ?? '-'}</Val>
+              <Val>{r.averageNoiseDecibel ?? '-'}</Val>
             </Row>
             <Row>
               <Key>최대 소음(dB)</Key>
-              <Val>{report.maxNoiseDecibel ?? '-'}</Val>
+              <Val>{r.maxNoiseDecibel ?? '-'}</Val>
             </Row>
             <Row>
               <Key>최대 소음 유형</Key>
-              <Val>{report.maxNoiseType || '-'}</Val>
+              <Val>{r.maxNoiseType || '-'}</Val>
             </Row>
             <Row>
               <Key>추정 스트레스</Key>
-              <Val>{report.assumedStress ?? '-'}</Val>
+              <Val>{r.assumedStress ?? '-'}</Val>
             </Row>
 
-            {report.hashtag && (
+            {r.hashtag && (
               <TagList>
-                {report.hashtag.split(',').map((tag, idx) => (
+                {r.hashtag.split(',').map((tag, idx) => (
                   <TagItem key={idx}>#{tag.trim()}</TagItem>
                 ))}
               </TagList>
             )}
 
-            {/* 텍스트 분석 섹션들 */}
-            {(report.staticalAnalyze || report.noiseFeature) && (
+            {(r.staticalAnalyze || r.noiseFeature) && (
               <Section>
                 <SectionTitle>통계/특징</SectionTitle>
-                {report.staticalAnalyze && <SectionBody>{report.staticalAnalyze}</SectionBody>}
-                {report.noiseFeature && (
-                  <SectionBody style={{ marginTop: 8 }}>{report.noiseFeature}</SectionBody>
+                {r.staticalAnalyze && <SectionBody>{r.staticalAnalyze}</SectionBody>}
+                {r.noiseFeature && (
+                  <SectionBody style={{ marginTop: 8 }}>{r.noiseFeature}</SectionBody>
                 )}
               </Section>
             )}
 
-            {report.caution && (
+            {r.caution && (
               <Section>
                 <SectionTitle>주의 사항</SectionTitle>
-                <SectionBody>{report.caution}</SectionBody>
+                <SectionBody>{r.caution}</SectionBody>
               </Section>
             )}
-
-            {report.recommendedAction && (
+            {r.recommendedAction && (
               <Section>
                 <SectionTitle>권장 조치</SectionTitle>
-                <SectionBody>{report.recommendedAction}</SectionBody>
+                <SectionBody>{r.recommendedAction}</SectionBody>
               </Section>
             )}
 
             <FootNote>
-              생성시각: {fmtDateTime(report.createAt)}
-              {Array.isArray(report.reportNoiseDataIds) &&
-                ` · 근거 데이터 ${report.reportNoiseDataIds.length}건`}
+              생성시각: {fmtDateTime(r.createAt)}
+              {Array.isArray(r.reportNoiseDataIds) &&
+                ` · 근거 데이터 ${r.reportNoiseDataIds.length}건`}
             </FootNote>
           </>
         )}
@@ -193,5 +175,4 @@ const AIAdvise = ({ startDate, endDate }) => {
     </Card>
   );
 };
-
 export default AIAdvise;

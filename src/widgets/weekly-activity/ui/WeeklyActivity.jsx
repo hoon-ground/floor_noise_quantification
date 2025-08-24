@@ -1,9 +1,9 @@
 import styled from 'styled-components';
 import Card from '@shared/ui/Card';
 import Spinner from '@shared/ui/Spinner';
-import { useEffect, useMemo, useState } from 'react';
-import { getNoiseDataByDate } from '@entities/noise/api/noiseApi';
+import { useMemo } from 'react';
 import { yTicks10 } from '@entities/noise/model/timeBuckets';
+import { useNoiseByDate } from '@entities/noise/model/noiseQueries';
 
 const Title = styled.h3`
   color: #4c4c4c;
@@ -56,50 +56,26 @@ const WeeklyActivity = () => {
     return arr;
   }, [startDate]);
 
-  const [loading, setLoading] = useState(false);
-  const [points, setPoints] = useState([]);
-  const [error, setError] = useState('');
+  const { data: list = [], isLoading, isError } = useNoiseByDate(startDate, endDate);
 
-  useEffect(() => {
-    const fetchWeek = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        setPoints([]);
+  const points = useMemo(() => {
+    const byDay = new Map();
+    list.forEach((row) => {
+      const d = new Date(row.uploadTime);
+      const key = fmtYmd(d);
+      const cur = byDay.get(key) || { sum: 0, cnt: 0 };
+      cur.sum += Number(row.decibelLevel || 0);
+      cur.cnt += 1;
+      byDay.set(key, cur);
+    });
 
-        const res = await getNoiseDataByDate({ startDate, endDate });
-        if (!res.data?.success) throw new Error('주간 데이터 조회 실패');
-
-        const list = res.data.data || [];
-
-        const byDay = new Map();
-        list.forEach((row) => {
-          const d = new Date(row.uploadTime);
-          const key = fmtYmd(d);
-          const cur = byDay.get(key) || { sum: 0, cnt: 0 };
-          cur.sum += Number(row.decibelLevel || 0);
-          cur.cnt += 1;
-          byDay.set(key, cur);
-        });
-
-        const series = days.map((d) => {
-          const key = fmtYmd(d);
-          const rec = byDay.get(key);
-          const avg = rec ? Math.round(rec.sum / Math.max(1, rec.cnt)) : 0;
-          return { t: d, v: avg };
-        });
-
-        setPoints(series);
-      } catch (e) {
-        console.error(e);
-        setError('데이터 없음');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWeek();
-  }, [startDate, endDate, days]);
+    return days.map((d) => {
+      const key = fmtYmd(d);
+      const rec = byDay.get(key);
+      const avg = rec ? Math.round(rec.sum / Math.max(1, rec.cnt)) : 0;
+      return { t: d, v: avg };
+    });
+  }, [list, days]);
 
   const W = 680,
     H = 180,
@@ -123,10 +99,10 @@ const WeeklyActivity = () => {
     <Card>
       <Title>주간 소음 수치</Title>
       <ChartContainer>
-        {loading ? (
+        {isLoading ? (
           <Spinner />
         ) : !points.length ? (
-          <ErrorText>{error || '데이터 없음'}</ErrorText>
+          <ErrorText>{isError ? '데이터 없음' : '데이터 없음'}</ErrorText>
         ) : (
           <svg
             width="100%"

@@ -1,9 +1,10 @@
 import styled from 'styled-components';
 import Card from '@shared/ui/Card';
 import Spinner from '@shared/ui/Spinner';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { getNoiseDataByDate } from '@entities/noise/api/noiseApi';
 import { bucketize, pickBucketMs, yTicks10 } from '@entities/noise/model/timeBuckets';
+import { useNoiseByDate } from '@entities/noise/model/noiseQueries';
 
 const Title = styled.h3`
   color: #4c4c4c;
@@ -39,10 +40,7 @@ const fallbackRange = () => {
 };
 
 const NoiseChart = ({ startDate, endDate }) => {
-  const [loading, setLoading] = useState(false);
-  const [series, setSeries] = useState([]);
   const [bucketMs, setBucketMs] = useState(60 * 1000);
-  const [error, setError] = useState('');
 
   const { start, end, singleDay, startIso, endIso } = useMemo(() => {
     if (!startDate || !endDate) {
@@ -67,38 +65,21 @@ const NoiseChart = ({ startDate, endDate }) => {
     };
   }, [startDate, endDate]);
 
-  useEffect(() => {
-    if (!start || !end) {
-      return;
-    }
+  const {
+    data: list = [],
+    isLoading,
+    isError,
+  } = useNoiseByDate(startIso, endIso, {
+    enabled: Boolean(startIso && endIso),
+  });
 
-    const fetchRange = async () => {
-      try {
-        setLoading(true);
-        setError('');
-
-        const res = await getNoiseDataByDate({ startDate: startIso, endDate: endIso });
-        if (!res.data?.success) {
-          throw new Error('소음 데이터 조회 실패');
-        }
-        const list = res.data.data || [];
-
-        const dur = end - start;
-        const bm = pickBucketMs(dur, { singleDay });
-        setBucketMs(bm);
-
-        const buckets = bucketize({ points: list, start, end, bucketMs: bm });
-        setSeries(buckets);
-      } catch (e) {
-        console.error(e);
-        setError('데이터 없음');
-        setSeries([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRange();
-  }, [start, end, singleDay, startIso, endIso]);
+  const series = useMemo(() => {
+    if (!start || !end) return [];
+    const dur = end - start;
+    const bm = pickBucketMs(dur, { singleDay });
+    setBucketMs(bm);
+    return bucketize({ points: list, start, end, bucketMs: bm });
+  }, [list, start, end, singleDay]);
 
   const W = 680,
     H = 200,
@@ -150,7 +131,7 @@ const NoiseChart = ({ startDate, endDate }) => {
     <Card>
       <Title>시간대별 소음 수치</Title>
       <ChartContainer>
-        {loading ? (
+        {isLoading ? (
           <Spinner />
         ) : (
           <svg
@@ -199,7 +180,7 @@ const NoiseChart = ({ startDate, endDate }) => {
               </>
             ) : (
               <text x={W / 2} y={H / 2} textAnchor="middle" fill="#9aa5b1">
-                {error || '데이터 없음'}
+                {isError ? '데이터 없음' : '데이터 없음'}
               </text>
             )}
 

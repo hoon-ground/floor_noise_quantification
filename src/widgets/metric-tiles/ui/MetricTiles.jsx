@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import Spinner from '@shared/ui/Spinner';
-import { useEffect, useMemo, useState } from 'react';
-import { getNoiseReport } from '@entities/noise/api/noiseApi';
+import { useMemo } from 'react';
+import { useNoiseReport } from '@entities/noise/model/noiseQueries';
 
 const Grid = styled.div`
   width: 100%;
@@ -72,44 +72,21 @@ const MetricTiles = ({ startDate: _start, endDate: _end }) => {
   const startDate = _start || today;
   const endDate = _end || today;
 
-  const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState(null);
-  const [error, setError] = useState('');
+  const { data: report, isLoading, isError } = useNoiseReport(startDate, endDate);
 
-  const fmtDate = (s) => (s ? s.replace('T', ' ').slice(0, 16) : '');
-  const safeNum = (v, fallback = 0) => (typeof v === 'number' && !Number.isNaN(v) ? v : fallback);
-
-  useEffect(() => {
-    const run = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        setReport(null);
-
-        const res = await getNoiseReport({ startDate, endDate });
-        if (!res?.data?.success) throw new Error('리포트 조회 실패');
-
-        setReport(res.data.data || null);
-      } catch (e) {
-        console.error(e);
-        setError('데이터 없음');
-      } finally {
-        setLoading(false);
-      }
-    };
-    run();
-  }, [startDate, endDate]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <SpinnerWrap>
         <Spinner />
       </SpinnerWrap>
     );
   }
-  if (error || !report) {
-    return <ErrorText>{error || '데이터 없음'}</ErrorText>;
+  if (isError || !report) {
+    return <ErrorText>데이터 없음</ErrorText>;
   }
+
+  const safeNum = (v, f = 0) => (typeof v === 'number' && !Number.isNaN(v) ? v : f);
+  const fmtDate = (s) => (s ? s.replace('T', ' ').slice(0, 16) : '');
 
   const avg = safeNum(report.averageNoiseDecibel);
   const max = safeNum(report.maxNoiseDecibel);
@@ -126,13 +103,11 @@ const MetricTiles = ({ startDate: _start, endDate: _end }) => {
           {createdAt ? `생성시각 ${createdAt}` : `${startDate} ~ ${endDate}`}
         </Description>
       </Tile>
-
       <Tile>
         <Title>최대 소음 수치(dB)</Title>
         <Value>{max}</Value>
         <Description>{type !== '-' ? `유형 : ${type}` : '유형 데이터 없음'}</Description>
       </Tile>
-
       <Tile>
         <Title>스트레스 지수</Title>
         <Value>{stress}</Value>
@@ -143,5 +118,4 @@ const MetricTiles = ({ startDate: _start, endDate: _end }) => {
     </Grid>
   );
 };
-
 export default MetricTiles;

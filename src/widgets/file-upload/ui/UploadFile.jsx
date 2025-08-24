@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import Card from '@shared/ui/Card';
 import Spinner from '@shared/ui/Spinner';
 import { useState } from 'react';
-import { uploadNoiseData } from '@entities/noise/api/noiseApi';
+import { useUploadNoiseData } from '@entities/noise/model/noiseQueries';
 
 const UploadContainer = styled.div`
   display: grid;
@@ -102,9 +102,10 @@ const Description = styled.div`
 `;
 
 const UploadFile = () => {
-  const [loading, setLoading] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [fileName, setFileName] = useState('');
+
+  const uploadM = useUploadNoiseData();
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -121,18 +122,17 @@ const UploadFile = () => {
       return;
     }
     try {
-      setLoading(true);
-      await uploadNoiseData({
+      await uploadM.mutateAsync({
         customerId: 1,
         decibelLevel: 75,
         file: recordedBlob,
       });
       alert('업로드 성공!');
+      setRecordedBlob(null);
+      setFileName('');
     } catch (err) {
       console.error('업로드 실패:', err);
-      alert('업로드 실패 😥');
-    } finally {
-      setLoading(false);
+      alert('업로드 실패');
     }
   };
 
@@ -145,11 +145,11 @@ const UploadFile = () => {
           <FileName>{fileName || '선택된 파일 없음'}</FileName>
         </FileWrapper>
 
-        <UploadButton onClick={handleUpload} disabled={!recordedBlob || loading}>
+        <UploadButton onClick={handleUpload} disabled={!recordedBlob || uploadM.isPending}>
           업로드
         </UploadButton>
 
-        {loading && (
+        {uploadM.isPending && (
           <SmallSpinnerWrap>
             <Spinner />
           </SmallSpinnerWrap>
