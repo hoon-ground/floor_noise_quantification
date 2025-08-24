@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { getNoiseDataByDate } from '@entities/noise/api/noiseApi';
 import { bucketize, pickBucketMs, yTicks10 } from '@entities/noise/model/timeBuckets';
 
-const Title = styled.div`
+const Title = styled.h3`
   color: #4c4c4c;
   font-weight: 700;
   margin-bottom: 8px;
 `;
+
 const ChartContainer = styled.div`
   height: 220px;
   padding: 8px;
@@ -169,7 +170,7 @@ const NoiseChart = ({ startDate, endDate }) => {
 
             <rect x="0" y="0" width={W} height={H} rx="12" fill="#fff" />
 
-            {/* y grid + labels */}
+            {/* y축 */}
             <g stroke="#e9edf5">
               {yTicks.map((t) => (
                 <line key={t} x1={P} x2={P + innerW} y1={yScale(t)} y2={yScale(t)} />
@@ -183,7 +184,7 @@ const NoiseChart = ({ startDate, endDate }) => {
               ))}
             </g>
 
-            {/* area + line */}
+            {/* 영역 */}
             {series.length ? (
               <>
                 <path d={areaPath} fill="url(#rangeArea)" />
@@ -202,7 +203,7 @@ const NoiseChart = ({ startDate, endDate }) => {
               </text>
             )}
 
-            {/* x labels */}
+            {/* x축 */}
             <g fontSize="12" fill="#908f8f" textAnchor="middle">
               {xLabelIdx.map((i) => (
                 <text key={i} x={xScale(i)} y={P + innerH + 16}>
@@ -211,7 +212,7 @@ const NoiseChart = ({ startDate, endDate }) => {
               ))}
             </g>
 
-            {/* 버킷 안내 */}
+            {/* 버킷 */}
             <g fontSize="11" fill="#9aa5b1">
               <text x={W - P} y={H - 8} textAnchor="end">
                 bucket: {Math.round(bucketMs / 60000)}m

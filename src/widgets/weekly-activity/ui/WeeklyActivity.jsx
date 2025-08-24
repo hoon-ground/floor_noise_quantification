@@ -1,119 +1,197 @@
 import styled from 'styled-components';
 import Card from '@shared/ui/Card';
+import Spinner from '@shared/ui/Spinner';
+import { useEffect, useMemo, useState } from 'react';
+import { getNoiseDataByDate } from '@entities/noise/api/noiseApi';
+import { yTicks10 } from '@entities/noise/model/timeBuckets';
 
-const Header = styled.div`
-  width: 100%;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-weight: 800;
-  color: #1f2937;
+const Title = styled.h3`
+  color: #4c4c4c;
+  font-weight: 700;
   margin-bottom: 8px;
 `;
 
-const Title = styled.h2`
-  color: #4c4c4c;
-  font-family: Inter;
-  font-size: 0.875rem;
-  font-style: normal;
-  font-weight: 600;
-  line-height: 140%;
-`;
-
-const SubTitle = styled.h3`
-  font-size: 12px;
-  color: #9aa5b1;
-  font-weight: 700;
-`;
-
-const Chart = styled.div`
-  background: #f2f5fb;
+const ChartContainer = styled.div`
+  height: 200px;
+  padding: 8px;
+  background: #fff;
   border-radius: 12px;
-  padding: 10px 8px 6px;
+  display: flex;
+  align-items: center;
 `;
 
-const Days = styled.div`
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  margin-top: 6px;
-  font-size: 11px;
-  color: #8e9aae;
-  font-weight: 700;
+const ErrorText = styled.div`
+  color: #9aa5b1;
   text-align: center;
+  width: 100%;
 `;
 
-const dot = (x, y) => `${x},${y}`;
+const fmtYmd = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 
-// TODO : 전부 임시 데이터. 갈아엎을 예정
+const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
+
 const WeeklyActivity = () => {
-  const points = [7, 6, 7.5, 10, 7.2, 7.4, 7.6];
-  const selected = 3;
+  const today = useMemo(() => new Date(), []);
+  const endDate = useMemo(() => fmtYmd(today), [today]);
 
-  const W = 640,
-    H = 120,
-    P = 10;
-  const innerW = W - P * 2,
-    innerH = H - P * 2;
-  const max = Math.max(...points),
-    min = Math.min(...points);
-  const x = (i) => P + (innerW / 6) * i;
-  const y = (v) => P + innerH - ((v - min) / (max - min || 1)) * innerH;
+  const startDate = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 6);
+    return fmtYmd(d);
+  }, [today]);
 
-  const line = points.map((v, i) => dot(x(i), y(v))).join(' ');
-  const area = `M ${x(0)} ${y(min)} L ${line} L ${x(6)} ${y(min)} Z`;
+  const days = useMemo(() => {
+    const arr = [];
+    const start = new Date(startDate);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      arr.push(new Date(d));
+    }
+    return arr;
+  }, [startDate]);
+
+  const [loading, setLoading] = useState(false);
+  const [points, setPoints] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchWeek = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        setPoints([]);
+
+        const res = await getNoiseDataByDate({ startDate, endDate });
+        if (!res.data?.success) throw new Error('주간 데이터 조회 실패');
+
+        const list = res.data.data || [];
+
+        const byDay = new Map();
+        list.forEach((row) => {
+          const d = new Date(row.uploadTime);
+          const key = fmtYmd(d);
+          const cur = byDay.get(key) || { sum: 0, cnt: 0 };
+          cur.sum += Number(row.decibelLevel || 0);
+          cur.cnt += 1;
+          byDay.set(key, cur);
+        });
+
+        const series = days.map((d) => {
+          const key = fmtYmd(d);
+          const rec = byDay.get(key);
+          const avg = rec ? Math.round(rec.sum / Math.max(1, rec.cnt)) : 0;
+          return { t: d, v: avg };
+        });
+
+        setPoints(series);
+      } catch (e) {
+        console.error(e);
+        setError('데이터 없음');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWeek();
+  }, [startDate, endDate, days]);
+
+  const W = 680,
+    H = 180,
+    P = 28;
+  const innerW = W - P * 2;
+  const innerH = H - P * 2;
+
+  const yMax = Math.max(...points.map((p) => p.v), 1);
+  const yTicks = yTicks10(yMax);
+  const yTop = yTicks.at(-1) || 10;
+
+  const xScale = (i) => P + (innerW * i) / Math.max(1, points.length - 1 || 1);
+  const yScale = (v) => P + innerH - (innerH * v) / yTop;
+
+  const poly = points.map((p, i) => `${xScale(i)},${yScale(p.v)}`).join(' ');
+  const areaPath = points.length
+    ? `M ${xScale(0)} ${yScale(0)} L ${poly} L ${xScale(points.length - 1)} ${yScale(0)} Z`
+    : '';
 
   return (
     <Card>
-      <Header>
-        <Title>Your Activity</Title>
-        <SubTitle>Weekly</SubTitle>
-      </Header>
-      <Chart>
-        <svg width="100%" height="120" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="wa" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#5ca4ff" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#5ca4ff" stopOpacity="0.05" />
-            </linearGradient>
-          </defs>
+      <Title>주간 소음 수치</Title>
+      <ChartContainer>
+        {loading ? (
+          <Spinner />
+        ) : !points.length ? (
+          <ErrorText>{error || '데이터 없음'}</ErrorText>
+        ) : (
+          <svg
+            width="100%"
+            height="100%"
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label="주간 소음 활동 그래프"
+          >
+            <defs>
+              <linearGradient id="weeklyArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#5ca4ff" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#5ca4ff" stopOpacity="0.05" />
+              </linearGradient>
+            </defs>
 
-          <path d={area} fill="url(#wa)" />
-          <polyline
-            points={line}
-            fill="none"
-            stroke="#5ca4ff"
-            strokeWidth="3"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
+            <rect x="0" y="0" width={W} height={H} rx="12" fill="#fff" />
 
-          <line
-            x1={x(selected)}
-            x2={x(selected)}
-            y1={P}
-            y2={P + innerH}
-            stroke="#9cc2ff"
-            strokeWidth="3"
-            opacity="0.35"
-          />
-          <circle
-            cx={x(selected)}
-            cy={y(points[selected])}
-            r="6"
-            fill="#fff"
-            stroke="#5ca4ff"
-            strokeWidth="3"
-          />
-        </svg>
+            {/* y간격 */}
+            <g stroke="#e9edf5">
+              {yTicks.map((t) => (
+                <line key={t} x1={P} x2={P + innerW} y1={yScale(t)} y2={yScale(t)} />
+              ))}
+            </g>
 
-        <Days>
-          {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d, i) => (
-            <div key={d} style={{ color: i === selected ? '#336dff' : undefined }}>
-              {d}
-            </div>
-          ))}
-        </Days>
-      </Chart>
+            {/* y축 */}
+            <g fontSize="12" fill="#77838f" textAnchor="end">
+              {yTicks.map((t) => (
+                <text key={t} x={P - 8} y={yScale(t) + 4}>
+                  {t}
+                </text>
+              ))}
+            </g>
+
+            {/* 영역 */}
+            {points.length ? (
+              <>
+                <path d={areaPath} fill="url(#weeklyArea)" />
+                <polyline
+                  points={poly}
+                  fill="none"
+                  stroke="#5ca4ff"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </>
+            ) : null}
+
+            {/* x축 */}
+            <g fontSize="12" fill="#908f8f" textAnchor="middle">
+              {points.map((p, i) => {
+                const month = p.t.getMonth() + 1;
+                const date = p.t.getDate();
+                const weekday = WEEKDAY[p.t.getDay()];
+                return (
+                  <text key={i} x={xScale(i)} y={P + innerH + 16}>
+                    {`${month}/${date} (${weekday})`}
+                  </text>
+                );
+              })}
+            </g>
+          </svg>
+        )}
+      </ChartContainer>
     </Card>
   );
 };

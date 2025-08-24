@@ -62,6 +62,7 @@ const TagList = styled.div`
   margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
 `;
 

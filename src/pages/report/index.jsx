@@ -36,7 +36,7 @@ const ReportPage = () => {
       <NoiseChart startDate={range.startDate} endDate={range.endDate} />
       <EmptySpace />
 
-      <MetricTiles />
+      <MetricTiles startDate={range.startDate} endDate={range.endDate} />
       <EmptySpace />
 
       <AIAdvise startDate={range.startDate} endDate={range.endDate} />
