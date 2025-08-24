@@ -14,7 +14,7 @@ const ModalOverlay = styled.div`
 
 const ModalContent = styled.div`
   width: 100%;
-  max-width: 720px;
+  max-width: 540px;
   margin: 0 12px;
   background: #fff;
   border-radius: 18px;
@@ -84,8 +84,13 @@ const NoticeCreateModal = ({ onClose, onCreate }) => {
 
   const handleSave = () => {
     const t = text.trim();
-    if (!t) return;
-    onCreate?.(t);
+    if (!t) {
+      return;
+    }
+    onCreate?.({
+      text: t,
+      category: 'notice',
+    });
   };
 
   return (

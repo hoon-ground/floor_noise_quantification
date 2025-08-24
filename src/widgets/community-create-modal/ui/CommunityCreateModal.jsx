@@ -14,7 +14,7 @@ const PostingOverlay = styled.div`
 
 const PostContent = styled.div`
   width: 100%;
-  max-width: 720px;
+  max-width: 540px;
   margin: 0 12px;
   background: #fff;
   border-radius: 18px;
@@ -42,12 +42,21 @@ const Upload = styled.label`
   display: grid;
   place-items: center;
   width: 100%;
-  height: 140px;
+  min-height: 140px;
+  max-height: 720px;
+  overflow: hidden;
   border-radius: 12px;
   background-color: #f2f5fb;
   color: #9aa5b1;
   cursor: pointer;
   margin: 8px 0;
+
+  img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border-radius: 12px;
+  }
 `;
 
 const Hidden = styled.input`
@@ -87,10 +96,10 @@ const SaveButton = styled.button`
 `;
 
 const CommunityCreateModal = ({ onClose, onCreate }) => {
-  const me = useMemo(() => ({ unit: '103동 304호', avatar: '' }), []);
+  const me = useMemo(() => ({ unit: '103동 304호', avatar: null }), []);
   const [text, setText] = useState('');
   const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState('');
+  const [preview, setPreview] = useState(null);
 
   const onPick = (e) => {
     const f = e.target.files?.[0];
@@ -108,7 +117,7 @@ const CommunityCreateModal = ({ onClose, onCreate }) => {
     <PostingOverlay onClick={onClose}>
       <PostContent onClick={(e) => e.stopPropagation()}>
         <Header>
-          <Profile src={me.avatar} alt="" />
+          <Profile src={me.avatar} alt="프로필" />
           <div style={{ fontWeight: 900 }}>{me.unit}</div>
         </Header>
 
