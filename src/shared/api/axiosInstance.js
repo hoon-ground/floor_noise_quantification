@@ -1,14 +1,16 @@
 import axios from 'axios';
 
-export const axiosInstance = axios.create({
+export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
 });
 
-axiosInstance.interceptors.response.use(
+api.interceptors.response.use(
   (res) => res,
   (err) => {
     console.error('[API ERROR]', err?.response?.status, err?.response?.data);
     return Promise.reject(err);
   }
 );
+
+export default api;
