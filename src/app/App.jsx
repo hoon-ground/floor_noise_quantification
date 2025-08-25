@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainPage from '@pages/main/index';
 import ReportPage from '@pages/report/index';
 import CommunityPage from '@pages/community/index';
