@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "serve -s dist -l 50000"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.5",
