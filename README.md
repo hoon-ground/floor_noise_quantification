@@ -75,14 +75,14 @@ Likelion 13th Hackathon FrontEnd
 ## 프론트엔드 기술 스택
 ### 개발 환경
 - **React** + **Vite**  
-- 초기 배포: **AWS S3 (HTTP)** → 이후 **Docker (HTTPS)**로 전환 (마이크 권한 문제 해결)
+- 초기 배포: **AWS S3 (HTTP)** → 이후 **Docker (HTTPS)** 로 전환 (마이크 권한 문제 해결)
 
 ### 주요 라이브러리 & 도구
 - **React Query (@tanstack/react-query)**  
   - 서버 상태 관리 및 캐싱  
   - 세션 스토리지와 결합해 UX 개선  
 - **Styled-components**  
-- **Axios** (API 통신)
+- **Axios** (API 통신) (25/08/27까지만 API 연결이 유효)
 
 ### 오디오 처리
 - **Web Audio API + MediaDevices API**  
