@@ -1,0 +1,12 @@
+services:
+    noise-stop-web:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: noise-stop-web
+        environment:
+            NODE_ENV: production
+            PORT: 
+        ports:
+            - "50000:50000"
+        restart: always
