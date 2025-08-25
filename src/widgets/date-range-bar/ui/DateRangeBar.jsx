@@ -2,11 +2,14 @@ import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 
 const BarContainer = styled.form`
-  display: flex;
   gap: 8px;
   align-items: center;
   justify-content: center;
   margin: 8px 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 const DateInput = styled.input`
@@ -16,6 +19,8 @@ const DateInput = styled.input`
   border-radius: 10px;
   background: #fff;
   color: #111827;
+  min-width: 9.5rem;
+  flex: 0 1 auto;
 `;
 
 const InquiryButton = styled.button`

@@ -12,12 +12,14 @@ const Title = styled.h3`
 `;
 
 const ChartContainer = styled.div`
+  width: 100%;
   height: 200px;
   padding: 8px;
   background: #fff;
   border-radius: 12px;
   display: flex;
   align-items: center;
+  justify-content: center;
 `;
 
 const ErrorText = styled.div`

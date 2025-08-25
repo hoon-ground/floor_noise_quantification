@@ -9,17 +9,19 @@ const Grid = styled.div`
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
-  justify-items: stretch;
-  align-items: stretch;
 `;
 
 const Tile = styled.div`
+  box-sizing: border-box;
   width: 100%;
-  height: 5.125rem;
+  min-height: 4.5rem;
   flex-shrink: 0;
   border-radius: 0.5rem;
   border: 2px solid rgba(116, 176, 255, 0.77);
   background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 `;
 
 const Title = styled.div`
@@ -28,7 +30,9 @@ const Title = styled.div`
   font-size: 0.875rem;
   font-style: normal;
   font-weight: 600;
-  line-height: 140%;
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 `;
 
 const Value = styled.div`
